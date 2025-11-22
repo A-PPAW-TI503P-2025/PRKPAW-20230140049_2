@@ -1,0 +1,29 @@
+'use strict';
+const {
+  Model
+} = require('sequelize');
+module.exports = (sequelize, DataTypes) => {
+  class Presensi extends Model {
+    static associate(models) {
+      Presensi.belongsTo(models.User, { foreignKey: 'userId' });
+    }
+  }
+  Presensi.init({
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    checkIn: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
+    checkOut: {
+      type: DataTypes.DATE,
+      allowNull: true, // Boleh kosong (null) karena saat baru check-in, belum ada jam check-out
+    }
+  }, {
+    sequelize,
+    modelName: 'Presensi',
+  });
+  return Presensi;
+};
