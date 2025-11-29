@@ -4,36 +4,29 @@ const timeZone = "Asia/Jakarta";
 
 exports.CheckIn = async (req, res) => {
   try {
-    // Ambil ID user dari Token (yang sudah didecode middleware)
-    const { id } = req.user; 
-    const waktuSekarang = new Date();
+    const { id: userId } = req.user;
+    const { latitude, longitude } = req.body; // <-- Ambil data lokasi dari Frontend
 
-    // Cek apakah user ini sudah check-in tapi belum check-out
     const existingRecord = await Presensi.findOne({
-      where: { userId: id, checkOut: null },
+      where: { userId: userId, checkOut: null },
     });
 
     if (existingRecord) {
       return res.status(400).json({ message: "Anda sudah check-in (belum check-out)." });
     }
 
-    // PERBAIKAN UTAMA DISINI:
-    // Hapus 'nama: userName' karena kolom nama sudah tidak ada di database presensi
     const newRecord = await Presensi.create({
-      userId: id,
-      checkIn: waktuSekarang
-      // JANGAN ADA NAMA DISINI
+      userId: userId,
+      checkIn: new Date(),
+      latitude: latitude, // <-- Simpan Lat
+      longitude: longitude // <-- Simpan Long
     });
 
     res.status(201).json({
       message: "Berhasil Check-in!",
-      data: {
-        id: newRecord.id,
-        checkIn: format(newRecord.checkIn, "yyyy-MM-dd HH:mm:ss", { timeZone }),
-      }
+      data: newRecord
     });
   } catch (error) {
-    console.error("Error CheckIn:", error); // Supaya error jelas terlihat di terminal
     res.status(500).json({ message: "Error Server", error: error.message });
   }
 };

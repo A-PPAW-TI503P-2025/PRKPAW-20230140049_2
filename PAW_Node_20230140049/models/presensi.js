@@ -4,9 +4,13 @@ const {
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Presensi extends Model {
-    static associate(models) {
-      Presensi.belongsTo(models.User, { foreignKey: 'userId' });
-    }
+static associate(models) {
+  // Presensi milik satu User
+  Presensi.belongsTo(models.User, {
+    foreignKey: 'userId',
+    as: 'user'
+  });
+}
   }
   Presensi.init({
     userId: {

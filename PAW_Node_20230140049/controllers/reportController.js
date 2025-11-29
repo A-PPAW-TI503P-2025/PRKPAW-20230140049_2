@@ -1,23 +1,25 @@
-const { Presensi, User } = require('../models'); // <-- PENTING: Import User
-const { Op } = require("sequelize");
+const { Presensi, User } = require('../models');
 
 exports.getDailyReport = async (req, res) => {
   try {
-    const { nama } = req.query;
-    
-    let options = {
-      include: [{ model: User, attributes: ['nama'] }], // <-- JOIN ke tabel User ambil namanya saja
-      order: [['createdAt', 'DESC']]
-    };
-
-    
-    const records = await Presensi.findAll(options);
+    // Ambil data Presensi beserta data User pemiliknya
+    const records = await Presensi.findAll({
+      include: [
+        {
+          model: User,
+          as: 'user', // PENTING: Harus sesuai dengan alias di models/presensi.js
+          attributes: ['nama', 'email', 'role'] // Kita hanya butuh nama, email, role
+        }
+      ],
+      order: [['createdAt', 'DESC']] // Urutkan dari yang paling baru
+    });
 
     res.json({
-      message: "Laporan Harian",
+      message: "Data Laporan Harian",
       data: records,
     });
   } catch (error) {
-    res.status(500).json({ message: "Gagal", error: error.message });
+    console.error("Error Report:", error);
+    res.status(500).json({ message: "Gagal mengambil laporan", error: error.message });
   }
 };

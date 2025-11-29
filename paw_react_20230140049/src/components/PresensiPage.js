@@ -2,93 +2,139 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
+// Import komponen Peta
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+// Fix icon marker leaflet yang hilang di React
+import L from 'leaflet';
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+    iconUrl: icon,
+    shadowUrl: iconShadow,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+});
+L.Marker.prototype.options.icon = DefaultIcon;
 
 function PresensiPage() {
-  // State untuk menyimpan data user dan pesan status
   const [user, setUser] = useState({ nama: '', role: '' });
+  const [coords, setCoords] = useState(null); // Simpan Lokasi {lat, lng}
   const [message, setMessage] = useState('');
   const navigate = useNavigate();
 
-  // 1. Ambil data User dari Token saat halaman dibuka
+  // 1. Ambil User Token
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
-      navigate('/login'); // Redirect ke login jika tidak ada token
+      navigate('/login');
     } else {
       try {
         const decoded = jwtDecode(token);
-        setUser(decoded); // Simpan data (nama, role, id) ke state
+        setUser(decoded);
       } catch (error) {
-        console.error("Token invalid", error);
         navigate('/login');
       }
     }
   }, [navigate]);
 
-  // 2. Fungsi untuk mengirim request Absen ke Backend
-  const handleAbsensi = async (type) => {
-    try {
-      const token = localStorage.getItem('token');
-      const endpoint = type === 'in' ? 'check-in' : 'check-out';
-      
-      // Kirim request ke port 3001 (Backend)
-      const response = await axios.post(
-        `http://localhost:3001/api/attendance/${endpoint}`,
-        {}, // Body kosong
-        {
-          headers: { Authorization: `Bearer ${token}` } // Wajib bawa token!
+  // 2. Ambil Lokasi GPS (Geolocation)
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCoords({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => {
+          setMessage("Gagal mendapatkan lokasi: " + error.message);
         }
       );
+    } else {
+      setMessage("Browser tidak mendukung Geolocation.");
+    }
+  }, []);
 
-      setMessage(response.data.message); // Tampilkan pesan sukses
+  // 3. Fungsi Check-In (Kirim Lokasi ke Backend)
+  const handleCheckIn = async () => {
+    if (!coords) {
+      setMessage("Lokasi belum ditemukan. Tunggu sebentar atau izinkan GPS.");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `http://localhost:3001/api/attendance/check-in`,
+        {
+          latitude: coords.lat,  // Kirim Latitude
+          longitude: coords.lng  // Kirim Longitude
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setMessage(response.data.message);
     } catch (error) {
-      // Tampilkan pesan error dari backend (misal: "Sudah check-in")
-      setMessage(error.response ? error.response.data.message : 'Terjadi kesalahan');
+      setMessage(error.response ? error.response.data.message : 'Gagal Check-in');
+    }
+  };
+
+  const handleCheckOut = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `http://localhost:3001/api/attendance/check-out`,
+        {}, 
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setMessage(response.data.message);
+    } catch (error) {
+      setMessage(error.response ? error.response.data.message : 'Gagal Check-out');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center pt-10">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-lg text-center">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Aplikasi Absensi</h1>
-        <h2 className="text-lg mb-6 text-gray-600">Halo, {user.nama}!</h2>
+    <div className="min-h-screen bg-gray-100 flex flex-col items-center pt-10 pb-10">
+      <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-lg text-center">
+        <h1 className="text-2xl font-bold mb-4">Presensi Online</h1>
+        <p className="mb-4 text-gray-600">Halo, {user.nama} ({user.role})</p>
 
-        {/* Area Menampilkan Pesan Sukses/Error */}
         {message && (
-          <div className={`p-3 rounded mb-6 ${message.toLowerCase().includes('berhasil') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          <div className={`p-3 rounded mb-4 ${message.includes('Gagal') || message.includes('belum') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
             {message}
           </div>
         )}
 
-        {/* --- LOGIKA PEMISAHAN TAMPILAN (UI) --- */}
-        
-        {user.role === 'mahasiswa' ? (
-          // TAMPILAN 1: KHUSUS MAHASISWA (Ada Tombol)
-          <div className="flex gap-4 justify-center mb-8">
-            <button 
-              onClick={() => handleAbsensi('in')} 
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded transition shadow-lg"
-            >
+        {/* VISUALISASI PETA */}
+        {coords ? (
+          <div className="mb-6 border-2 border-gray-200 rounded overflow-hidden">
+            <MapContainer center={[coords.lat, coords.lng]} zoom={15} style={{ height: '300px', width: '100%' }}>
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; OpenStreetMap contributors'
+              />
+              <Marker position={[coords.lat, coords.lng]}>
+                <Popup>Lokasi Kamu Saat Ini</Popup>
+              </Marker>
+            </MapContainer>
+            <p className="text-xs text-gray-500 mt-1">Lat: {coords.lat}, Lng: {coords.lng}</p>
+          </div>
+        ) : (
+          <p className="mb-6 text-yellow-600 animate-pulse">Sedang mencari lokasi...</p>
+        )}
+
+        {/* TOMBOL AKSI */}
+        {user.role === 'mahasiswa' && (
+          <div className="flex gap-4 justify-center">
+            <button onClick={handleCheckIn} className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 shadow-lg transition">
               CHECK IN
             </button>
-            <button 
-              onClick={() => handleAbsensi('out')} 
-              className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded transition shadow-lg"
-            >
+            <button onClick={handleCheckOut} className="bg-orange-500 text-white px-6 py-2 rounded hover:bg-orange-600 shadow-lg transition">
               CHECK OUT
             </button>
           </div>
-        ) : (
-          // TAMPILAN 2: KHUSUS ADMIN (Hanya Pesan)
-          <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg text-blue-800">
-            <p className="font-bold text-lg mb-2">Mode Admin</p>
-            <p className="text-sm">Anda masuk sebagai Administrator.</p>
-            <p className="text-sm mt-1">
-              Silakan akses menu <strong>Laporan Admin</strong> di navbar atas untuk melihat rekap presensi.
-            </p>
-          </div>
         )}
-
       </div>
     </div>
   );
