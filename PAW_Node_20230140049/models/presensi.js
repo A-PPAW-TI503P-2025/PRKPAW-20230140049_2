@@ -4,13 +4,13 @@ const {
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Presensi extends Model {
-static associate(models) {
-  // Presensi milik satu User
-  Presensi.belongsTo(models.User, {
-    foreignKey: 'userId',
-    as: 'user'
-  });
-}
+    static associate(models) {
+      // Presensi milik satu User
+      Presensi.belongsTo(models.User, {
+        foreignKey: 'userId',
+        as: 'user'
+      });
+    }
   }
   Presensi.init({
     userId: {
@@ -23,8 +23,22 @@ static associate(models) {
     },
     checkOut: {
       type: DataTypes.DATE,
-      allowNull: true, // Boleh kosong (null) karena saat baru check-in, belum ada jam check-out
+      allowNull: true,
+    },
+    // --- TAMBAHAN WAJIB AGAR DATA MUNCUL DI LAPORAN ---
+    latitude: {
+      type: DataTypes.DECIMAL(10, 8),
+      allowNull: true
+    },
+    longitude: {
+      type: DataTypes.DECIMAL(11, 8),
+      allowNull: true
+    },
+    buktiFoto: {
+      type: DataTypes.STRING,
+      allowNull: true
     }
+    // --------------------------------------------------
   }, {
     sequelize,
     modelName: 'Presensi',
