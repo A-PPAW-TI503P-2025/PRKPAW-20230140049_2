@@ -9,6 +9,7 @@ const PORT = 3001;
 const presensiRoutes = require("./routes/presensi");
 const authRoutes = require('./routes/auth');
 const reportRoutes = require('./routes/reports');
+const iotRoutes = require('./routes/iot');
 
 app.use(cors());
 app.use(express.json());
@@ -20,6 +21,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use("/api/attendance", presensiRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/iot', iotRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server berjalan di http://localhost:${PORT}`);
