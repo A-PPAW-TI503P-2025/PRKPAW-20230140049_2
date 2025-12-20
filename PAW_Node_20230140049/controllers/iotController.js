@@ -15,3 +15,13 @@ exports.testConnection = (req, res) => {
     reply: "Halo ESP32, Server menerima datamu!" 
   });
 };
+
+exports.receiveSensorData = (req, res) => {
+  // Kita terima data suhu, kelembaban, dan alert (Tugas)
+  const { suhu, kelembaban, alert } = req.body;
+
+  // Log ke terminal agar terlihat mencolok
+  console.log(`🔥 [SENSOR LOG] Suhu: ${suhu}°C | Lembab: ${kelembaban}% | Status: ${alert}`);
+
+  res.status(200).json({ status: "Data sensor diterima" });
+};
