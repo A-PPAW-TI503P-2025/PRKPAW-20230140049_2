@@ -16,12 +16,34 @@ exports.testConnection = (req, res) => {
   });
 };
 
-exports.receiveSensorData = (req, res) => {
-  // Kita terima data suhu, kelembaban, dan alert (Tugas)
-  const { suhu, kelembaban, alert } = req.body;
+exports.receiveSensorData = async (req, res) => {
+  try {
+    // 1. Terima data dari ESP32
+    // Catatan: 'cahaya' opsional jika belum pasang LDR, default 0
+    const { suhu, kelembaban, cahaya, alert } = req.body; 
 
-  // Log ke terminal agar terlihat mencolok
-  console.log(`🔥 [SENSOR LOG] Suhu: ${suhu}°C | Lembab: ${kelembaban}% | Status: ${alert}`);
+    // 2. Validasi Sederhana
+    if (suhu === undefined || kelembaban === undefined) {
+      return res.status(400).json({ 
+        status: "error", 
+        message: "Data suhu/kelembaban kosong!" 
+      });
+    }
 
-  res.status(200).json({ status: "Data sensor diterima" });
+    // 3. Simpan ke Database
+    const newData = await SensorLog.create({
+      suhu: parseFloat(suhu),
+      kelembaban: parseFloat(kelembaban),
+      cahaya: parseInt(cahaya) || 0 // Default 0 jika null
+    });
+
+    // 4. Log Cantik di Terminal
+    console.log(`💾 [SAVED] Suhu: ${suhu}°C | Lembab: ${kelembaban}% | Alert: ${alert || '-'}`);
+
+    res.status(201).json({ status: "ok", message: "Data tersimpan di DB" });
+  
+  } catch (error) {
+    console.error("Gagal simpan:", error);
+    res.status(500).json({ status: "error", message: error.message });
+  }
 };
