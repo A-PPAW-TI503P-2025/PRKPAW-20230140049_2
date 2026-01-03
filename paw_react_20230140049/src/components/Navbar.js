@@ -39,9 +39,13 @@ function Navbar() {
         <Link to="/presensi" className="hover:text-gray-200 font-semibold">Absensi</Link>
         
         {/* Menu Laporan KHUSUS ADMIN */}
-        {user.role === 'admin' && (
-          <Link to="/reports" className="hover:text-gray-200 font-semibold">Laporan Admin</Link>
-        )}
+          {user.role === 'admin' && (
+            <>
+              <Link to="/reports" className="hover:text-gray-200 font-semibold">Laporan Admin</Link>
+              
+              <Link to="/monitoring" className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium ml-4">Monitoring IoT</Link>
+            </>
+          )}
       </div>
 
       <div className="flex items-center space-x-4">
